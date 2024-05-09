@@ -3,7 +3,7 @@
 
     <el-header>
       <div class="header-content">
-        <button class="el-icon-user">
+        <button class="el-icon-user" @click="goToHome()">
           首页
         </button>
         <button class="el-icon-user" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
@@ -34,9 +34,8 @@
           <el-menu-item index="2-3">选项3</el-menu-item>
         </el-menu>
       </el-aside>
-
       <el-main>
-        <el-table :data="pagedArticles" style="width: 100%" border>
+        <el-table :data="homeArticles" style="width: 100%" border show-header=false>
           <el-table-column>
             <template slot-scope="scope">
               <div @click="goToDetail(scope.row.articleId)">
@@ -49,54 +48,39 @@
                 </div>
               </div>
             </template>
-
           </el-table-column>
-
         </el-table>
-        <div class="block">
-          <el-pagination layout="prev, pager, next" 
-          :total="totalItems"
-          :current-page="currentPage"
-          @current-change="handlePageChange"
-          >
-          </el-pagination>
+        <div>
+          <!-- 在需要登录的组件中添加一个模态框 -->
+          <el-dialog title="提示" :visible.sync="showLoginModal">
+            <p>您还未登录，请先登录！</p>
+            <span slot="footer" class="dialog-footer">
+              <el-button @click="goToLogin" type="primary">去登录</el-button>
+            </span>
+          </el-dialog>
         </div>
       </el-main>
-
     </el-container>
-
     <el-footer>
-      footer
+      {{ categoryId }}
     </el-footer>
   </el-container>
 </template>
-
+    
 <script>
 import axios from 'axios';
 export default {
   data() {
     return {
       homeArticles: [],
+      categoryId: null,
       showMenu: false,
-      loginStatus: false,  // 登录状态
-      username: '' ,        // 用户名
-      currentPage: 1,   // 当前页码
-      pageSize: 8,     // 每页显示条数
+      loginStatus: false,
+      categoryName: null,
+      showLoginModal: false
     }
   },
-  computed: {
-    totalItems() {
-      return this.homeArticles.length;
-    },
-    pagedArticles() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return this.homeArticles.slice(start, end);
-    },
-  },
   mounted() {
-
-
     const token = localStorage.getItem('token');
     if (token) {
       this.loginStatus = true;
@@ -106,63 +90,74 @@ export default {
       this.loginStatus = false;
       this.username = '';
     }
-    axios.get("http://localhost:8080/home", {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-      .then(response => {
-        if (response.data.code === 1) {
-          console.log(response.data);
-          this.homeArticles = response.data.data;
-        } else {
-          // 响应失败，输出错误信息
-          console.error('Error:', response.data.msg);
-          // if (response.data.msg === "NOT_LOGIN") {
-
-          // }
-        }
-      })
-      .catch(error => {
-        console.log(error.response);
-      });
-
+    this.categoryId = this.$route.params.categoryId;
+    this.categoryName = this.$route.params.categoryName;
+    this.loadDataByCategoryId(this.categoryId);
   },
   methods: {
     goToDetail(articleId) {
       this.$router.push({ name: 'article', params: { articleId: articleId } });
     },
     handleMenuClick(item) {
-      this.$router.push({ name: 'categories', params: item });
+      const { categoryId, categoryName } = item;
+      // 判断是否需要更新路由参数
+      if (this.categoryId !== categoryId) {
+        // 更新路由参数并重新加载数据
+        this.$router.push({ name: 'categories', params: { categoryId: categoryId, categoryName: categoryName } });
+        this.loadDataByCategoryId(categoryId);
+      }
     },
-    Login() {
-      this.$router.push({ name: 'login' });
+    loadDataByCategoryId(categoryId) {
+      const token = localStorage.getItem('token');
+      console.log("categorice-token:" + token);
+      this.categoryId = this.$route.params.categoryId;
+      this.categoryName = this.$route.params.categoryName;
+      // 根据 categoryId 加载相应的数据
+      axios.post(`http://localhost:8080/home/${categoryId}`, null, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(response => {
+          if (response.data.code == 1) {
+            console.log(response.data);
+            this.homeArticles = response.data.data;
+          } else {
+            // 响应失败，输出错误信息
+            console.error('Error:', response.data.message);
+            if (response.data.msg === "NOT_LOGIN") {
+              this.showLoginModal = true;
+            }
+          }
+        }).catch(error => {
+          // 发生错误时的处理
+          console.error('Error:', error);
+        });
     },
     goToLogin() {
       // 可以使用路由来跳转到登录页面
       this.$router.push('/login');
     },
     logout() {
-      console.log("点击了按钮");
       localStorage.removeItem('token');  // 清除token
       localStorage.removeItem('username');
       this.loginStatus = false;
       this.username = '';
     },
+    Login() {
+      this.$router.push({ name: 'login' });
+    },
     goToUserProfile() {
       this.$router.push({ name: 'userprofile' });
-      // 这里可以添加你想要执行的其他操作
+
     },
-    handlePageChange(page) {
-      this.currentPage = page;
-    },
-   
+    goToHome() {
+      this.$router.push({ name: 'home' });
+    }
   }
-
-
 }
 </script>
-
+    
 <style>
 .header-content {
   display: flex;
