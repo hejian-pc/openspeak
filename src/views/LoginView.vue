@@ -19,6 +19,9 @@
   
   <script>
   import axios from 'axios';
+  const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
   export default {
     data() {
       return {
@@ -36,7 +39,7 @@
         console.log('密码:', this.form.password);
         // 在这里可以向后端发送表单数据，执行其他操作
         // 登录请求
-        axios.post('http://localhost:8080/login', {
+        apiClient.post('/login', {
           username: this.form.name,
           password: this.form.password
         })
@@ -47,7 +50,7 @@
             // 将令牌存储在本地，这里使用LocalStorage示例
             localStorage.setItem('token', token);
             localStorage.setItem('username', this.form.name);
-            
+            localStorage.setItem('userId', this.form.userId);
             const returnUrl = this.$route.query.returnUrl || '/';
             this.$router.push(returnUrl);
 

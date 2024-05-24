@@ -57,6 +57,9 @@
 </template>
   <script>
   import axios from 'axios';
+  const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
   export default {
       data() {
           return {
@@ -72,7 +75,7 @@
       mounted() {
           const token = localStorage.getItem('token');
           const username = localStorage.getItem('username');
-          axios.get(`http://localhost:8080/login/${username}`, {
+          apiClient.get(`/login/${username}`, {
               headers: {
                   'Authorization': `Bearer ${token}`
               }
@@ -95,7 +98,7 @@
       methods: {
           fetchLikedArticles() {
               const token = localStorage.getItem('token');
-              axios.get(`http://localhost:8080/like/${this.userInfo.userId}`, {
+              apiClient.get(`/like/${this.userInfo.userId}`, {
                   headers: {
                       'Authorization': `Bearer ${token}`
                   }

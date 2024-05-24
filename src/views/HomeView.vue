@@ -20,18 +20,14 @@
     <el-container>
       <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
         <el-menu :default-openeds="['1', '3']">
-
-          <el-menu-item index="1-1" @click="handleMenuClick({ categoryId: 1, categoryName: '运动' })">运动</el-menu-item>
-          <el-menu-item index="1-2" @click="handleMenuClick({ categoryId: 2, categoryName: '新闻' })">新闻</el-menu-item>
-          <el-menu-item index="1-3" @click="handleMenuClick({ categoryId: 3, categoryName: '体育' })">体育</el-menu-item>
-          <el-submenu index="1-4">
-            <template slot="title">艺术</template>
-            <el-menu-item index="1-4-1">风景画</el-menu-item>
-          </el-submenu>
-          <el-menu-item index="2-1">选项1</el-menu-item>
-          <el-menu-item index="2-2">选项2</el-menu-item>
-
-          <el-menu-item index="2-3">选项3</el-menu-item>
+          <el-menu-item
+            v-for="category in categories"
+            :key="category.categoryId"
+            :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)"
+          >
+            {{ category.categoryName }}
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -45,7 +41,7 @@
                   {{ scope.row.content }}
                 </div>
                 <div>
-                  作者: {{ scope.row.articleId }} 创建时间: {{ scope.row.publishDate }}
+                  作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
             </template>
@@ -73,16 +69,23 @@
 
 <script>
 import axios from 'axios';
+
+// 创建 axios 实例
+const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
+
 export default {
   data() {
     return {
-      homeArticles: [],
-      showMenu: false,
-      loginStatus: false,  // 登录状态
-      username: '' ,        // 用户名
-      currentPage: 1,   // 当前页码
-      pageSize: 8,     // 每页显示条数
-    }
+      categories: [], // 分类列表
+      homeArticles: [], // 主页文章列表
+      showMenu: false, // 显示菜单
+      loginStatus: false, // 登录状态
+      username: '', // 用户名
+      currentPage: 1, // 当前页码
+      pageSize: 8, // 每页显示条数
+    };
   },
   computed: {
     totalItems() {
@@ -95,72 +98,79 @@ export default {
     },
   },
   mounted() {
-
-
-    const token = localStorage.getItem('token');
-    if (token) {
-      this.loginStatus = true;
-      this.username = localStorage.getItem('username');
-    } else {
-
-      this.loginStatus = false;
-      this.username = '';
-    }
-    axios.get("http://localhost:8080/home", {
-      headers: {
-        'Authorization': `Bearer ${token}`
+    this.queryCategories();
+    this.checkLoginStatus();
+    this.fetchHomeArticles();
+  },
+  methods: {
+    checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        this.loginStatus = true;
+        this.username = localStorage.getItem('username');
+      } else {
+        this.loginStatus = false;
+        this.username = '';
       }
-    })
+    },
+    fetchHomeArticles() {
+      const token = localStorage.getItem('token');
+      apiClient.get("/home", {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       .then(response => {
         if (response.data.code === 1) {
           console.log(response.data);
           this.homeArticles = response.data.data;
         } else {
-          // 响应失败，输出错误信息
           console.error('Error:', response.data.msg);
-          // if (response.data.msg === "NOT_LOGIN") {
-
-          // }
         }
       })
       .catch(error => {
         console.log(error.response);
       });
-
-  },
-  methods: {
+    },
+    queryCategories() {
+      apiClient.get("/categories")
+      .then(response => {
+        if (response.data.code === 1) {
+          console.log(response.data);
+          this.categories = response.data.data;
+        } else {
+          console.error('Error:', response.data.msg);
+        }
+      })
+      .catch(error => {
+        console.log(error.response);
+      });
+    },
     goToDetail(articleId) {
       this.$router.push({ name: 'article', params: { articleId: articleId } });
     },
     handleMenuClick(item) {
       this.$router.push({ name: 'categories', params: item });
     },
-    Login() {
-      this.$router.push({ name: 'login' });
-    },
     goToLogin() {
-      // 可以使用路由来跳转到登录页面
       this.$router.push('/login');
     },
     logout() {
       console.log("点击了按钮");
-      localStorage.removeItem('token');  // 清除token
+      localStorage.removeItem('token');
       localStorage.removeItem('username');
       this.loginStatus = false;
       this.username = '';
     },
     goToUserProfile() {
       this.$router.push({ name: 'userprofile' });
-      // 这里可以添加你想要执行的其他操作
     },
     handlePageChange(page) {
       this.currentPage = page;
-    },
-   
+    }
   }
+};
 
-
-}
 </script>
 
 <style>

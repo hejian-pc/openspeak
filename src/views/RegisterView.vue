@@ -33,6 +33,9 @@
 </template>
 <script>
 import axios from 'axios';
+const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
   export default {
     data() {
       return {
@@ -48,7 +51,7 @@ import axios from 'axios';
     methods: {
       onSubmit() {
         
-      axios.post('http://localhost:8080/register', {
+        apiClient.post('/register', {
           username: this.form.username,
           password: this.form.password,
           name:this.form.name,

@@ -18,23 +18,38 @@
     </el-header>
 
     <el-container>
+      
       <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
         <el-menu :default-openeds="['1', '3']">
-
-          <el-menu-item index="1-1" @click="handleMenuClick({ categoryId: 1, categoryName: '运动' })">运动</el-menu-item>
-          <el-menu-item index="1-2" @click="handleMenuClick({ categoryId: 2, categoryName: '新闻' })">新闻</el-menu-item>
-          <el-menu-item index="1-3" @click="handleMenuClick({ categoryId: 3, categoryName: '体育' })">体育</el-menu-item>
-          <el-submenu index="1-4">
-            <template slot="title">艺术</template>
-            <el-menu-item index="1-4-1">风景画</el-menu-item>
-          </el-submenu>
-          <el-menu-item index="2-1">选项1</el-menu-item>
-          <el-menu-item index="2-2">选项2</el-menu-item>
-
-          <el-menu-item index="2-3">选项3</el-menu-item>
+          <el-menu-item
+            v-for="category in categories"
+            :key="category.categoryId"
+            :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)"
+          >
+            {{ category.categoryName }}
+          </el-menu-item>
         </el-menu>
       </el-aside>
       <el-main>
+        <div>
+    <el-button type="primary" round @click="showPublishDialog = true">我要发布文章</el-button>
+    
+    <el-dialog title="发布文章" :visible.sync="showPublishDialog">
+      <el-form :model="form">
+        <el-form-item label="标题">
+          <el-input v-model="form.title"></el-input>
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input type="textarea" v-model="form.content"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="showPublishDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">提交</el-button>
+      </div>
+    </el-dialog>
+  </div>
         <el-table :data="homeArticles" style="width: 100%" border show-header=false>
           <el-table-column>
             <template slot-scope="scope">
@@ -44,7 +59,7 @@
                   {{ scope.row.content }}
                 </div>
                 <div>
-                  作者: {{ scope.row.articleId }} 创建时间: {{ scope.row.publishDate }}
+                  作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
             </template>
@@ -69,77 +84,107 @@
     
 <script>
 import axios from 'axios';
+
+// 创建 axios 实例
+const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
+
 export default {
   data() {
     return {
-      homeArticles: [],
-      categoryId: null,
-      showMenu: false,
-      loginStatus: false,
-      categoryName: null,
-      showLoginModal: false
-    }
+      categories: [], // 分类列表
+      homeArticles: [], // 主页文章列表
+      categoryId: null, // 当前分类 ID
+      categoryName: null, // 当前分类名称
+      showMenu: false, // 显示菜单
+      loginStatus: false, // 登录状态
+      showLoginModal: false, // 显示登录模态框
+      showPublishDialog: false, // 控制弹窗显示
+      form: {
+        title: '',
+        content: ''
+      }
+    };
   },
   mounted() {
-    const token = localStorage.getItem('token');
-    if (token) {
-      this.loginStatus = true;
-      this.username = localStorage.getItem('username');
-    } else {
-
-      this.loginStatus = false;
-      this.username = '';
-    }
-    this.categoryId = this.$route.params.categoryId;
-    this.categoryName = this.$route.params.categoryName;
-    this.loadDataByCategoryId(this.categoryId);
+    this.queryCategories();
+    this.checkLoginStatus();
+    this.initializeCategory();
   },
   methods: {
-    goToDetail(articleId) {
-      this.$router.push({ name: 'article', params: { articleId: articleId } });
+    checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        this.loginStatus = true;
+        this.username = localStorage.getItem('username');
+      } else {
+        this.loginStatus = false;
+        this.username = '';
+      }
+    },
+    initializeCategory() {
+      this.categoryId = this.$route.params.categoryId;
+      this.categoryName = this.$route.params.categoryName;
+      this.loadDataByCategoryId(this.categoryId);
+    },
+    queryCategories() {
+      apiClient.get("/categories")
+        .then(response => {
+          if (response.data.code === 1) {
+            console.log("Categories:", response.data);
+            this.categories = response.data.data;
+          } else {
+            console.error('Error:', response.data.msg);
+          }
+        })
+        .catch(error => {
+          console.log(error.response);
+        });
+    },
+    loadDataByCategoryId(categoryId) {
+      const token = localStorage.getItem('token');
+      console.log("Load data for category ID:", categoryId, "with token:", token);
+      this.categoryId = categoryId;
+      this.categoryName = this.$route.params.categoryName;
+
+      apiClient.post(`/home/${categoryId}`, null, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(response => {
+          if (response.data.code === 1) {
+            console.log("Home articles:", response.data);
+            this.homeArticles = response.data.data;
+          } else {
+            console.error('Error:', response.data.message);
+            if (response.data.msg === "NOT_LOGIN") {
+              this.showLoginModal = true;
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
     },
     handleMenuClick(item) {
       const { categoryId, categoryName } = item;
       // 判断是否需要更新路由参数
       if (this.categoryId !== categoryId) {
         // 更新路由参数并重新加载数据
-        this.$router.push({ name: 'categories', params: { categoryId: categoryId, categoryName: categoryName } });
+        this.$router.push({ name: 'categories', params: { categoryId, categoryName } });
         this.loadDataByCategoryId(categoryId);
       }
     },
-    loadDataByCategoryId(categoryId) {
-      const token = localStorage.getItem('token');
-      console.log("categorice-token:" + token);
-      this.categoryId = this.$route.params.categoryId;
-      this.categoryName = this.$route.params.categoryName;
-      // 根据 categoryId 加载相应的数据
-      axios.post(`http://localhost:8080/home/${categoryId}`, null, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then(response => {
-          if (response.data.code == 1) {
-            console.log(response.data);
-            this.homeArticles = response.data.data;
-          } else {
-            // 响应失败，输出错误信息
-            console.error('Error:', response.data.message);
-            if (response.data.msg === "NOT_LOGIN") {
-              this.showLoginModal = true;
-            }
-          }
-        }).catch(error => {
-          // 发生错误时的处理
-          console.error('Error:', error);
-        });
+    goToDetail(articleId) {
+      this.$router.push({ name: 'article', params: { articleId } });
     },
     goToLogin() {
-      // 可以使用路由来跳转到登录页面
       this.$router.push('/login');
     },
     logout() {
-      localStorage.removeItem('token');  // 清除token
+      localStorage.removeItem('token');
       localStorage.removeItem('username');
       this.loginStatus = false;
       this.username = '';
@@ -149,13 +194,21 @@ export default {
     },
     goToUserProfile() {
       this.$router.push({ name: 'userprofile' });
-
     },
     goToHome() {
       this.$router.push({ name: 'home' });
+    },
+    submitForm() {
+      // 提交表单逻辑
+      console.log('Form submitted with:', this.form);
+      // 重置表单并关闭弹窗
+      this.form.title = '';
+      this.form.content = '';
+      this.showPublishDialog = false;
     }
   }
-}
+};
+
 </script>
     
 <style>
@@ -226,4 +279,8 @@ body>.el-container {
 
 .el-aside {
   color: #333;
-}</style>
+}
+.dialog-footer {
+  text-align: right;
+}
+</style>

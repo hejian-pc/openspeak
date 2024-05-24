@@ -21,16 +21,14 @@
       <!-- 侧边 -->
       <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
         <el-menu :default-openeds="['1', '3']">
-          <el-menu-item index="1-1" @click="handleMenuClick({ categoryId: 1, categoryName: '运动' })">运动</el-menu-item>
-          <el-menu-item index="1-2" @click="handleMenuClick({ categoryId: 2, categoryName: '新闻' })">新闻</el-menu-item>
-          <el-menu-item index="1-3" @click="handleMenuClick({ categoryId: 3, categoryName: '体育' })">体育</el-menu-item>
-          <el-submenu index="1-4">
-            <template slot="title">艺术</template>
-            <el-menu-item index="1-4-1">风景画</el-menu-item>
-          </el-submenu>
-          <el-menu-item index="2-1">选项1</el-menu-item>
-          <el-menu-item index="2-2">选项2</el-menu-item>
-          <el-menu-item index="2-3">选项3</el-menu-item>
+          <el-menu-item
+            v-for="category in categories"
+            :key="category.categoryId"
+            :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)"
+          >
+            {{ category.categoryName }}
+          </el-menu-item>
         </el-menu>
       </el-aside>
       <!-- 主体 -->
@@ -44,7 +42,7 @@
                   {{ scope.row.content }}
                 </div>
                 <div>
-                  作者: {{ scope.row.userId }} 创建时间: {{ scope.row.publishDate }}
+                  作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
             </template>
@@ -56,7 +54,7 @@
           <div class="comment-container" v-for="comment in comments" :key="comment.replyId">
             <div class="comment-box">
               <div>{{ comment.replyContent }}</div>
-              <div class="comment-info">评论人: {{ comment.userId }} | 评论时间: {{ comment.replyDate }}</div>
+              <div class="comment-info">评论人: {{ comment.name }} | 评论时间: {{ comment.replyDate }}</div>
             </div>
           </div>
         </div>
@@ -100,186 +98,193 @@
 <script>
 import axios from 'axios';
 
+// 创建 axios 实例
+const apiClient = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL
+});
+
 export default {
   data() {
     return {
-      homeArticles: [],
-      articleId: null,
-      showLoginModal: false,
-      showMenu: false,
-      loginStatus: false,
-      liked: false,
-      comments: [],
-      newComment: '',
-      user: null,  // Initialize as an empty array
-      username: localStorage.getItem('username'), // Assuming the username is stored in localStorage
+      categories: [], // 分类列表
+      homeArticles: [], // 主页文章列表
+      articleId: null, // 当前文章 ID
+      showLoginModal: false, // 显示登录模态框
+      showMenu: false, // 显示菜单
+      loginStatus: false, // 登录状态
+      liked: false, // 是否已点赞
+      comments: [], // 评论列表
+      newComment: '', // 新评论内容
+      user: null, // 用户信息
+      username: localStorage.getItem('username') || '', // 用户名
     };
   },
 
   mounted() {
-    console.log("username");
-    console.log("username" + this.username);
-    this.articleId = this.$route.params.articleId || localStorage.getItem('articleId');
-    localStorage.setItem('articleId', this.articleId);
-    const token = localStorage.getItem('token');
+    this.initialize();
+  },
 
-    if (token) {
-      this.loginStatus = true;
-      this.username = localStorage.getItem('username');
-    } else {
+  methods: {
+    initialize() {
+      this.queryCategories();
+      this.checkLoginStatus();
+      this.loadArticleId();
+      this.loadHomeArticles();
+      this.loadComments();
+      this.loadUser();
+    },
 
-      this.loginStatus = false;
-      this.username = '';
-    }
-    axios.get(`http://localhost:8080/home/${this.articleId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+    checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      this.loginStatus = !!token;
+      if (this.loginStatus) {
+        this.username = localStorage.getItem('username');
+      } else {
+        this.username = '';
       }
-    })
-      .then(response => {
-        if (response.data.code == 1) {
-          console.log(response.data);
-          this.homeArticles = response.data.data;
-        } else {
-          // 响应失败，输出错误信息
-          console.error('Error:', response.data.message);
-          if (response.data.msg === "NOT_LOGIN") {
-            this.showLoginModal = true;
-          }
-        }
-      }).catch(error => {
-        // 发生错误时的处理
-        console.error('Error:', error);
-      });
+    },
 
-    axios.get(`http://localhost:8080/replies/${this.articleId}`)
-      .then(response => {
-        if (response.data.code == 1) {
-          console.log(response.data);
-          this.comments = response.data.data;
-        }
-      }).catch(error => {
-        // 发生错误时的处理
-        console.error('Error:', error);
-      });
+    loadArticleId() {
+      this.articleId = this.$route.params.articleId || localStorage.getItem('articleId');
+      localStorage.setItem('articleId', this.articleId);
+    },
 
-    axios.get(`http://localhost:8080/login/${this.username}`)
-      .then(response => {
-        if (response.data.code === 1) {
-          console.log("获取用户：" + response.data.data.username);
-          this.user = response.data.data;  // Assuming response.data.data is an array of users
-          this.checkIfLiked(this.user.userId, this.articleId);
+    loadHomeArticles() {
+      const token = localStorage.getItem('token');
+      apiClient.get(`/home/${this.articleId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
       })
-      .catch(error => {
-        console.error("获取用户时发生错误:", error);
-      });
-
-
-  },
-  methods: {
-    goToDetail(articleId) {
-      this.$router.push({ name: 'article', params: { articleId: articleId } });
+        .then(response => {
+          if (response.data.code === 1) {
+            this.homeArticles = response.data.data;
+          } else {
+            this.handleErrorResponse(response.data);
+          }
+        })
+        .catch(this.handleError);
     },
+
+    loadComments() {
+      apiClient.get(`/replies/${this.articleId}`)
+        .then(response => {
+          if (response.data.code === 1) {
+            this.comments = response.data.data;
+          }
+        })
+        .catch(this.handleError);
+    },
+
+    loadUser() {
+      apiClient.get(`/login/${this.username}`)
+        .then(response => {
+          if (response.data.code === 1) {
+            this.user = response.data.data;
+            this.checkIfLiked(this.user.userId, this.articleId);
+          }
+        })
+        .catch(this.handleError);
+    },
+
+    queryCategories() {
+      apiClient.get("/categories")
+        .then(response => {
+          if (response.data.code === 1) {
+            this.categories = response.data.data;
+          } else {
+            this.handleErrorResponse(response.data);
+          }
+        })
+        .catch(this.handleError);
+    },
+
     handleMenuClick(item) {
       this.$router.push({ name: 'categories', params: item });
     },
-    selectUser() {
-      axios.get(`http://localhost:8080/user/${this.username}`)
-        .then(response => {
-          if (response.data.code === 1) {
-            console.log("获取用户：" + response.data);
-            this.user = response.data.data;  // Assuming response.data.data is an array of users
-          }
-        })
-        .catch(error => {
-          console.error("获取用户时发生错误:", error);
-        });
-    },
-    postComment(userId, articleId, commentContent) {
-      // Your logic to post the comment with the provided parameters
-      console.log("User ID:", userId);
-      console.log("Article ID:", articleId);
-      console.log("Comment Content:", commentContent);
 
-      // Example Axios request to post the comment
-      axios.post('http://localhost:8080/replies', {
-        articleId: articleId,
-        userId: userId,
+    goToDetail(articleId) {
+      this.$router.push({ name: 'article', params: { articleId } });
+    },
+
+    postComment(userId, articleId, commentContent) {
+      apiClient.post('/replies', {
+        articleId,
+        userId,
         replyContent: commentContent
       })
         .then(response => {
-          // Handle successful comment submission
-          console.log("Comment posted successfully:", response.data);
-          // Optionally, you can update the comments list to display the newly posted comment
+          if (response.data.code === 1) {
+            this.comments.push(response.data.data); // 更新评论列表
+            this.newComment = ''; // 清空新评论内容
+            this.loadComments();
+          }
         })
-        .catch(error => {
-          // Handle error if the comment submission fails
-          console.error("Error posting comment:", error);
-        });
+        .catch(this.handleError);
     },
+
     logout() {
-      localStorage.removeItem('token');  // 清除token
+      localStorage.removeItem('token');
       localStorage.removeItem('username');
       this.loginStatus = false;
       this.username = '';
     },
+
     goToLogin() {
-      // 可以使用路由来跳转到登录页面
       this.$router.push('/login');
     },
+
     Login() {
-      this.$router.push({
-        name: 'login',
-        query: { returnUrl: this.$route.fullPath }
-      });
+      this.$router.push({ name: 'login', query: { returnUrl: this.$route.fullPath } });
     },
+
     goToUserProfile() {
       this.$router.push({ name: 'userprofile' });
-      // 这里可以添加你想要执行的其他操作
     },
+
     goToHome() {
       this.$router.push({ name: 'home' });
     },
+
     async checkIfLiked(userId, articleId) {
       try {
-        const response = await axios.post('http://localhost:8080/likes', {
-          articleId: articleId,
-          userId: userId
-        })
+        const response = await apiClient.post('/likes', { articleId, userId });
         if (response.data.data === 1) {
-          this.liked = true; // 假设后端返回的数据中有一个 liked 字段表示是否已经点赞
+          this.liked = true;
         }
       } catch (error) {
         console.error('Error:', error);
       }
     },
+
     toggleLike(userId, articleId) {
       try {
         if (this.liked) {
-          axios.delete('http://localhost:8080/like', {
-            data: {
-              articleId: articleId,
-              userId: userId
-            }
-          })
+          apiClient.delete('/like', {
+            data: { articleId, userId }
+          });
         } else {
-          axios.post('http://localhost:8080/like', {
-            articleId: articleId,
-            userId: userId
-          })
-
+          apiClient.post('/like', { articleId, userId });
         }
         this.liked = !this.liked;
       } catch (error) {
         console.error('Error:', error);
       }
+    },
+
+    handleErrorResponse(data) {
+      console.error('Error:', data.msg);
+      if (data.msg === "NOT_LOGIN") {
+        this.showLoginModal = true;
+      }
+    },
+
+    handleError(error) {
+      console.error('Error:', error);
     }
-
   }
+};
 
-
-}
 </script>
     
 <style>
