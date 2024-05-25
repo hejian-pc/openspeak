@@ -1,85 +1,84 @@
 <template>
   <el-container>
-
     <el-header>
       <div class="header-content">
-        <button class="el-icon-user" @click="goToHome()">
+        <button class="header-button" @click="goToHome()">
           首页
         </button>
-        <button class="el-icon-user" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
+        <button class="header-button" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
           {{ loginStatus ? username : '未登录' }}
         </button>
         <div class="custom-dropdown" v-show="loginStatus && showMenu">
           <button @click="goToUserProfile()">个人中心</button>
-          <button>喜欢列表</button>
           <button @click="logout()">登出</button>
         </div>
       </div>
     </el-header>
 
     <el-container>
-      
-      <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
+      <el-aside width="200px" class="aside-container">
         <el-menu :default-openeds="['1', '3']">
-          <el-menu-item
-            v-for="category in categories"
-            :key="category.categoryId"
-            :index="`1-${category.categoryId}`"
-            @click="handleMenuClick(category)"
-          >
+          <el-menu-item v-for="category in categories" :key="category.categoryId" :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)">
             {{ category.categoryName }}
           </el-menu-item>
         </el-menu>
       </el-aside>
-      <el-main>
-        <div>
-    <el-button type="primary" round @click="showPublishDialog = true">我要发布文章</el-button>
-    
-    <el-dialog title="发布文章" :visible.sync="showPublishDialog">
-      <el-form :model="form">
-        <el-form-item label="标题">
-          <el-input v-model="form.title"></el-input>
-        </el-form-item>
-        <el-form-item label="内容">
-          <el-input type="textarea" v-model="form.content"></el-input>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="showPublishDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitForm(form.title,form.content,user.userId,categoryId)">提交</el-button>
-      </div>
-    </el-dialog>
-  </div>
-        <el-table :data="homeArticles" style="width: 100%" border show-header=false>
-          <el-table-column>
+
+      <el-main class="main-content">
+        <div class="button-container">
+          <el-button type="primary" round @click="showPublishDialog = true">我要发布文章</el-button>
+        </div>
+
+        <el-dialog title="发布文章" :visible.sync="showPublishDialog">
+          <el-form :model="form">
+            <el-form-item label="标题">
+              <el-input v-model="form.title"></el-input>
+            </el-form-item>
+            <el-form-item label="内容">
+              <el-input type="textarea" v-model="form.content"></el-input>
+            </el-form-item>
+          </el-form>
+          <div slot="footer" class="dialog-footer">
+            <el-button @click="showPublishDialog = false">取消</el-button>
+            <el-button type="primary" @click="submitForm(form.title, form.content, user.userId, categoryId)">提交</el-button>
+          </div>
+        </el-dialog>
+
+        <el-table :data="homeArticles" style="width: 100%" border>
+          <el-table-column label="文章列表">
             <template slot-scope="scope">
-              <div @click="goToDetail(scope.row.articleId)">
+              <div @click="goToDetail(scope.row.articleId)" class="article-box">
                 <strong>{{ scope.row.title }}</strong>
-                <div style="max-height: 3em; overflow: hidden;">
+                <div class="article-content">
                   {{ scope.row.content }}
                 </div>
-                <div>
+                <div class="article-info">
                   作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
             </template>
           </el-table-column>
         </el-table>
-        <div>
-          <!-- 在需要登录的组件中添加一个模态框 -->
-          <el-dialog title="提示" :visible.sync="showLoginModal">
-            <p>您还未登录，请先登录！</p>
-            <span slot="footer" class="dialog-footer">
-              <el-button @click="goToLogin" type="primary">去登录</el-button>
-            </span>
-          </el-dialog>
+
+        <div class="block">
+          <el-pagination layout="prev, pager, next" :total="totalItems" :current-page="currentPage"
+            @current-change="handlePageChange">
+          </el-pagination>
         </div>
+
+        <el-dialog title="提示" :visible.sync="showLoginModal">
+          <p>您还未登录，请先登录！</p>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="goToLogin" type="primary">去登录</el-button>
+          </span>
+        </el-dialog>
       </el-main>
     </el-container>
-    <el-footer>
+
+    <el-footer class="footer">
       {{ categoryId }}
     </el-footer>
-    
   </el-container>
 </template>
     
@@ -211,7 +210,7 @@ export default {
     goToHome() {
       this.$router.push({ name: 'home' });
     },
-    submitForm(title,content,userId,categoryId) {
+    submitForm(title, content, userId, categoryId) {
       // 提交表单逻辑
       console.log('Form submitted with:', this.form);
 
@@ -233,15 +232,43 @@ export default {
 };
 
 </script>
-    
-<style>
+<style scoped>
 .header-content {
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  padding: 0 20px;
   position: relative;
-  /* Add position relative */
   z-index: 999;
-  /* Add a higher z-index */
+}
+
+.header-button {
+  background: #409EFF;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 10px 15px;
+  margin-left: 10px;
+  color: #FFFFFF;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.header-button:hover {
+  background-color: #e0e0e0;
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: auto;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 9999;
 }
 
 .el-header,
@@ -250,60 +277,55 @@ export default {
   color: #333;
   text-align: center;
   line-height: 60px;
-  position: relative;
-  /* Add position relative */
-  z-index: 1;
-  /* Ensure a lower z-index than header content */
 }
 
-.el-dropdown-menu {
-  position: absolute;
-  /* Adjust dropdown menu position */
-  top: 100%;
-  /* Position below the button */
-  left: 0;
-  /* Align with the button */
-  z-index: 9999;
-  /* Ensure dropdown menu is on top */
-}
-
-.el-aside {
+.aside-container {
   background-color: #D3DCE6;
   color: #333;
-  text-align: center;
-  line-height: 200px;
 }
 
-.el-main {
+.main-content {
   background-color: #E9EEF3;
-  color: #333;
-  text-align: center;
-  line-height: 160px;
+  padding: 20px;
 }
 
-body>.el-container {
-  margin-bottom: 40px;
+.article-box {
+  padding: 15px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-.el-container:nth-child(5) .el-aside,
-.el-container:nth-child(6) .el-aside {
-  line-height: 260px;
+.article-box:hover {
+  background-color: #f9f9f9;
 }
 
-.el-container:nth-child(7) .el-aside {
-  line-height: 320px;
+.article-content {
+  margin-top: 10px;
+  color: #666;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.el-header {
-  background-color: #B3C0D1;
-  color: #333;
-  line-height: 60px;
+.article-info {
+  margin-top: 10px;
+  color: #999;
+  font-size: 12px;
 }
 
-.el-aside {
-  color: #333;
-}
 .dialog-footer {
+  text-align: right;
+}
+
+.block {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.button-container {
+  margin-bottom: 20px;
   text-align: right;
 }
 </style>

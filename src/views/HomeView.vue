@@ -1,70 +1,63 @@
 <template>
   <el-container>
 
-    <el-header>
+    <el-header style="color: rgb(20, 106, 181);">
       <div class="header-content">
-        <button class="el-icon-user" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
+        <button class="header-button" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
           {{ loginStatus ? username : '未登录' }}
         </button>
         <div class="custom-dropdown" v-show="loginStatus && showMenu">
           <button @click="goToUserProfile()">个人中心</button>
-          <button>喜欢列表</button>
           <button @click="logout()">登出</button>
         </div>
       </div>
     </el-header>
 
     <el-container>
-      <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
+      <el-aside width="200px" class="aside-container">
         <el-menu :default-openeds="['1', '3']">
-          <el-menu-item
-            v-for="category in categories"
-            :key="category.categoryId"
-            :index="`1-${category.categoryId}`"
-            @click="handleMenuClick(category)"
-          >
+          <el-menu-item v-for="category in categories" :key="category.categoryId" :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)">
             {{ category.categoryName }}
           </el-menu-item>
           <el-menu-item>
-              <el-button type="primary" round @click="showPublishDialog = true">添加新的分类</el-button>
-    
-     
-            </el-menu-item>
+            <el-button type="primary" round @click="showPublishDialog = true">添加新的分类</el-button>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
-      <el-main>
-        <el-table :data="homeArticles" style="width: 100%" border show-header=false>
-          <el-table-column>
+      <el-main class="main-content">
+        <el-table :data="homeArticles" style="width: 100%" border>
+          <el-table-column label="文章列表">
             <template slot-scope="scope">
-              <div @click="goToDetail(scope.row.articleId)">
+              <div @click="goToDetail(scope.row.articleId)" class="article-box">
                 <strong>{{ scope.row.title }}</strong>
-                <div style="max-height: 3em; overflow: hidden;">
+                <div class="article-content">
                   {{ scope.row.content }}
                 </div>
-                <div>
+                <div class="article-info">
                   作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
             </template>
-
           </el-table-column>
-
         </el-table>
+
         <div class="block">
-          <el-pagination layout="prev, pager, next" 
+        <el-pagination
+          layout="prev, pager, next"
           :total="totalItems"
+          :page-size="pageSize"
           :current-page="currentPage"
           @current-change="handlePageChange"
-          >
-          </el-pagination>
-        </div>
-        
+        >
+        </el-pagination>
+      </div>
       </el-main>
 
     </el-container>
 
-    <el-footer>
+    <el-footer class="footer">
       footer
     </el-footer>
     <el-dialog title="新增分类" :visible.sync="showPublishDialog">
@@ -78,7 +71,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="showPublishDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitForm(form.categoryName,form.categoryDescription)">提交</el-button>
+        <el-button type="primary" @click="submitForm(form.categoryName, form.categoryDescription)">提交</el-button>
       </div>
     </el-dialog>
   </el-container>
@@ -100,9 +93,9 @@ export default {
       showMenu: false, // 显示菜单
       loginStatus: false, // 登录状态
       username: '', // 用户名
-      currentPage: 1, // 当前页码
       showPublishDialog: false, // 控制弹窗显示
-      pageSize: 8, // 每页显示条数
+      currentPage: 1, // 当前页码
+      pageSize: 6, // 每页显示条数
       form: {
         categoryName: '',
         categoryDescription: ''
@@ -116,6 +109,8 @@ export default {
     pagedArticles() {
       const start = (this.currentPage - 1) * this.pageSize;
       const end = start + this.pageSize;
+      console.log("页码大更新");
+      console.log(this.homeArticles.slice(start, end));
       return this.homeArticles.slice(start, end);
     },
   },
@@ -142,31 +137,31 @@ export default {
           'Authorization': `Bearer ${token}`
         }
       })
-      .then(response => {
-        if (response.data.code === 1) {
-          console.log(response.data);
-          this.homeArticles = response.data.data;
-        } else {
-          console.error('Error:', response.data.msg);
-        }
-      })
-      .catch(error => {
-        console.log(error.response);
-      });
+        .then(response => {
+          if (response.data.code === 1) {
+            console.log(response.data);
+            this.homeArticles = response.data.data;
+          } else {
+            console.error('Error:', response.data.msg);
+          }
+        })
+        .catch(error => {
+          console.log(error.response);
+        });
     },
     queryCategories() {
       apiClient.get("/categories")
-      .then(response => {
-        if (response.data.code === 1) {
-          console.log(response.data);
-          this.categories = response.data.data;
-        } else {
-          console.error('Error:', response.data.msg);
-        }
-      })
-      .catch(error => {
-        console.log(error.response);
-      });
+        .then(response => {
+          if (response.data.code === 1) {
+            console.log(response.data);
+            this.categories = response.data.data;
+          } else {
+            console.error('Error:', response.data.msg);
+          }
+        })
+        .catch(error => {
+          console.log(error.response);
+        });
     },
     goToDetail(articleId) {
       this.$router.push({ name: 'article', params: { articleId: articleId } });
@@ -190,7 +185,7 @@ export default {
     handlePageChange(page) {
       this.currentPage = page;
     },
-    submitForm(categoryName,categoryDescription) {
+    submitForm(categoryName, categoryDescription) {
       // 提交表单逻辑
       console.log('Form submitted with:', categoryName);
 
@@ -206,21 +201,51 @@ export default {
       this.form.categoryDescription = '';
       this.queryCategories();
       this.showPublishDialog = false;
-      
+
     }
   }
 };
 
 </script>
 
-<style>
+<style scoped>
 .header-content {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
+  padding: 0 20px;
   position: relative;
-  /* Add position relative */
   z-index: 999;
-  /* Add a higher z-index */
+  
+}
+
+.header-button {
+  background: #409EFF;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 10px 15px;
+  margin-left: 10px;
+  color: #FFFFFF;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.header-button:hover {
+  background-color: #e0e0e0;
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: auto;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 9999;
 }
 
 .el-header,
@@ -229,60 +254,50 @@ export default {
   color: #333;
   text-align: center;
   line-height: 60px;
-  position: relative;
-  /* Add position relative */
-  z-index: 1;
-  /* Ensure a lower z-index than header content */
 }
 
-.el-dropdown-menu {
-  position: absolute;
-  /* Adjust dropdown menu position */
-  top: 100%;
-  /* Position below the button */
-  left: 0;
-  /* Align with the button */
-  z-index: 9999;
-  /* Ensure dropdown menu is on top */
-}
-
-.el-aside {
+.aside-container {
   background-color: #D3DCE6;
   color: #333;
-  text-align: center;
-  line-height: 200px;
 }
 
-.el-main {
+.main-content {
   background-color: #E9EEF3;
-  color: #333;
-  text-align: center;
-  line-height: 160px;
+  padding: 20px;
 }
 
-body>.el-container {
-  margin-bottom: 40px;
+.article-box {
+  padding: 15px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-.el-container:nth-child(5) .el-aside,
-.el-container:nth-child(6) .el-aside {
-  line-height: 260px;
+.article-box:hover {
+  background-color: #f9f9f9;
 }
 
-.el-container:nth-child(7) .el-aside {
-  line-height: 320px;
+.article-content {
+  margin-top: 10px;
+  color: #666;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.el-header {
-  background-color: #B3C0D1;
-  color: #333;
-  line-height: 60px;
+.article-info {
+  margin-top: 10px;
+  color: #999;
+  font-size: 12px;
 }
 
-.el-aside {
-  color: #333;
-}
 .dialog-footer {
   text-align: right;
+}
+
+.block {
+  text-align: center;
+  margin-top: 20px;
 }
 </style>

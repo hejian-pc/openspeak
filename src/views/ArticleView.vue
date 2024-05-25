@@ -3,15 +3,14 @@
     <!-- 头 -->
     <el-header>
       <div class="header-content">
-        <button class="el-icon-user" @click="goToHome()">
+        <button class="header-button" @click="goToHome()">
           首页
         </button>
-        <button class="el-icon-user" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
+        <button class="header-button" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
           {{ loginStatus ? username : '未登录' }}
         </button>
         <div class="custom-dropdown" v-show="loginStatus && showMenu">
           <button @click="goToUserProfile()">个人中心</button>
-          <button>喜欢列表</button>
           <button @click="logout()">登出</button>
         </div>
       </div>
@@ -19,29 +18,25 @@
     <!-- 头与脚之间 -->
     <el-container>
       <!-- 侧边 -->
-      <el-aside width="200px" style="background-color: rgb(238, 241, 246)">
+      <el-aside width="200px" class="aside-container">
         <el-menu :default-openeds="['1', '3']">
-          <el-menu-item
-            v-for="category in categories"
-            :key="category.categoryId"
-            :index="`1-${category.categoryId}`"
-            @click="handleMenuClick(category)"
-          >
+          <el-menu-item v-for="category in categories" :key="category.categoryId" :index="`1-${category.categoryId}`"
+            @click="handleMenuClick(category)">
             {{ category.categoryName }}
           </el-menu-item>
         </el-menu>
       </el-aside>
       <!-- 主体 -->
       <el-main>
-        <el-table :data="homeArticles" style="width: 100%" border show-header=false>
-          <el-table-column>
+        <el-table :data="homeArticles" style="width: 100%" border>
+          <el-table-column label="文章详情">
             <template slot-scope="scope">
-              <div>
+              <div class="article-box">
                 <strong>{{ scope.row.title }}</strong>
-                <div>
+                <div class="article-content">
                   {{ scope.row.content }}
                 </div>
-                <div>
+                <div class="article-info">
                   作者: {{ scope.row.name }} 创建时间: {{ scope.row.publishDate }}
                 </div>
               </div>
@@ -59,32 +54,29 @@
           </div>
         </div>
         <!-- 评论输入框 -->
-        <div>
-          <el-input v-model="newComment" placeholder="请输入评论内容"></el-input>
+        <div class="comment-input-container">
+          <el-input v-model="newComment" placeholder="请输入评论内容" class="input-style"></el-input>
           <template v-if="loginStatus">
-            <el-button @click="postComment(user.userId, articleId, newComment)">发表评论</el-button>
+            <el-button @click="postComment(user.userId, articleId, newComment)" class="button-style">发表评论</el-button>
           </template>
           <template v-else>
-            <router-link :to="{ name: 'login', query: { returnUrl: this.$route.fullPath } }">
+            <router-link :to="{ name: 'login', query: { returnUrl: this.$route.fullPath } }" class="login-link">
               登录后发表评论
             </router-link>
           </template>
         </div>
-
         <!-- 点赞按钮 -->
-        <div>
+        <div class="like-button-container">
           <template v-if="loginStatus">
-          <el-button @click="toggleLike(user.userId, articleId)">{{ liked ? '取消点赞' : '点赞' }}</el-button>
-          <span v-if="liked">已点赞</span>
-        </template>
-        <template v-else>
-            <router-link :to="{ name: 'login', query: { returnUrl: this.$route.fullPath } }">
+            <el-button @click="toggleLike(user.userId, articleId)" class="button-style">{{ liked ? '取消点赞' : '点赞'
+            }}</el-button>
+            <span v-if="liked" class="liked-text">已点赞</span>
+          </template>
+          <template v-else>
+            <router-link :to="{ name: 'login', query: { returnUrl: this.$route.fullPath } }" class="login-link">
               登录后点赞
             </router-link>
           </template>
-        </div>
-        <div>
-          <!-- 在需要登录的组件中添加一个模态框 -->
         </div>
       </el-main>
     </el-container>
@@ -287,14 +279,39 @@ export default {
 
 </script>
     
-<style>
+<style scoped>
 .header-content {
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  padding: 0 20px;
   position: relative;
-  /* Add position relative */
   z-index: 999;
-  /* Add a higher z-index */
+}
+
+.header-button {
+  background: #409EFF;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 10px 15px;
+  margin-left: 10px;
+  color: #FFFFFF;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: auto;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 9999;
 }
 
 .el-header,
@@ -303,24 +320,9 @@ export default {
   color: #333;
   text-align: center;
   line-height: 60px;
-  position: relative;
-  /* Add position relative */
-  z-index: 1;
-  /* Ensure a lower z-index than header content */
 }
 
-.el-dropdown-menu {
-  position: absolute;
-  /* Adjust dropdown menu position */
-  top: 100%;
-  /* Position below the button */
-  left: 0;
-  /* Align with the button */
-  z-index: 9999;
-  /* Ensure dropdown menu is on top */
-}
-
-.el-aside {
+.aside-container {
   background-color: #D3DCE6;
   color: #333;
   text-align: center;
@@ -330,31 +332,24 @@ export default {
 .el-main {
   background-color: #E9EEF3;
   color: #333;
-  text-align: center;
-  line-height: 160px;
+  padding: 20px;
 }
 
-body>.el-container {
-  margin-bottom: 40px;
+.article-box {
+  border-bottom: 1px solid #ccc;
+  padding: 10px 0;
+  margin-bottom: 10px;
 }
 
-.el-container:nth-child(5) .el-aside,
-.el-container:nth-child(6) .el-aside {
-  line-height: 260px;
+.article-content {
+  margin-top: 10px;
+  color: #666;
 }
 
-.el-container:nth-child(7) .el-aside {
-  line-height: 320px;
-}
-
-.el-header {
-  background-color: #B3C0D1;
-  color: #333;
-  line-height: 60px;
-}
-
-.el-aside {
-  color: #333;
+.article-info {
+  margin-top: 10px;
+  color: #999;
+  font-size: 12px;
 }
 
 .comment-container {
@@ -365,10 +360,43 @@ body>.el-container {
   border: 1px solid #ccc;
   padding: 10px;
   border-radius: 5px;
+  background-color: #fff;
 }
 
 .comment-info {
   margin-top: 5px;
   color: #666;
   font-size: 12px;
-}</style>
+}
+
+.comment-input-container {
+  margin-top: 20px;
+}
+
+.input-style {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.button-style {
+  border: none;
+  border-radius: 20px;
+  color: white;
+  background-color: #007BFF;
+}
+
+.like-button-container {
+  margin-top: 20px;
+}
+
+.liked-text {
+  margin-left: 10px;
+  color: #007BFF;
+}
+
+.login-link {
+  color: #007BFF;
+  text-decoration: none;
+  font-weight: bold;
+}
+</style>
