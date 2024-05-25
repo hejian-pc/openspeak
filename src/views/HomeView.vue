@@ -3,9 +3,6 @@
 
     <el-header>
       <div class="header-content">
-        <button class="el-icon-user">
-          首页
-        </button>
         <button class="el-icon-user" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
           {{ loginStatus ? username : '未登录' }}
         </button>
@@ -28,11 +25,16 @@
           >
             {{ category.categoryName }}
           </el-menu-item>
+          <el-menu-item>
+              <el-button type="primary" round @click="showPublishDialog = true">添加新的分类</el-button>
+    
+     
+            </el-menu-item>
         </el-menu>
       </el-aside>
 
       <el-main>
-        <el-table :data="pagedArticles" style="width: 100%" border>
+        <el-table :data="homeArticles" style="width: 100%" border show-header=false>
           <el-table-column>
             <template slot-scope="scope">
               <div @click="goToDetail(scope.row.articleId)">
@@ -57,6 +59,7 @@
           >
           </el-pagination>
         </div>
+        
       </el-main>
 
     </el-container>
@@ -64,6 +67,20 @@
     <el-footer>
       footer
     </el-footer>
+    <el-dialog title="新增分类" :visible.sync="showPublishDialog">
+      <el-form :model="form">
+        <el-form-item label="分类名称">
+          <el-input v-model="form.categoryName"></el-input>
+        </el-form-item>
+        <el-form-item label="分类描述">
+          <el-input type="textarea" v-model="form.categoryDescription"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="showPublishDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm(form.categoryName,form.categoryDescription)">提交</el-button>
+      </div>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -84,7 +101,12 @@ export default {
       loginStatus: false, // 登录状态
       username: '', // 用户名
       currentPage: 1, // 当前页码
+      showPublishDialog: false, // 控制弹窗显示
       pageSize: 8, // 每页显示条数
+      form: {
+        categoryName: '',
+        categoryDescription: ''
+      }
     };
   },
   computed: {
@@ -167,6 +189,24 @@ export default {
     },
     handlePageChange(page) {
       this.currentPage = page;
+    },
+    submitForm(categoryName,categoryDescription) {
+      // 提交表单逻辑
+      console.log('Form submitted with:', categoryName);
+
+      apiClient.post(`/categories`, {
+        categoryName,
+        categoryDescription
+      })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+
+      this.form.categoryName = '';
+      this.form.categoryDescription = '';
+      this.queryCategories();
+      this.showPublishDialog = false;
+      
     }
   }
 };
@@ -241,4 +281,8 @@ body>.el-container {
 
 .el-aside {
   color: #333;
-}</style>
+}
+.dialog-footer {
+  text-align: right;
+}
+</style>

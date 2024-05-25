@@ -46,7 +46,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="showPublishDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">提交</el-button>
+        <el-button type="primary" @click="submitForm(form.title,form.content,user.userId,categoryId)">提交</el-button>
       </div>
     </el-dialog>
   </div>
@@ -79,6 +79,7 @@
     <el-footer>
       {{ categoryId }}
     </el-footer>
+    
   </el-container>
 </template>
     
@@ -100,6 +101,7 @@ export default {
       showMenu: false, // 显示菜单
       loginStatus: false, // 登录状态
       showLoginModal: false, // 显示登录模态框
+      user: null, // 用户信息
       showPublishDialog: false, // 控制弹窗显示
       form: {
         title: '',
@@ -111,6 +113,7 @@ export default {
     this.queryCategories();
     this.checkLoginStatus();
     this.initializeCategory();
+    this.loadUser();
   },
   methods: {
     checkLoginStatus() {
@@ -141,6 +144,16 @@ export default {
         .catch(error => {
           console.log(error.response);
         });
+    },
+    loadUser() {
+      apiClient.get(`/login/${this.username}`)
+        .then(response => {
+          if (response.data.code === 1) {
+            this.user = response.data.data;
+            //this.checkIfLiked(this.user.userId, this.articleId);
+          }
+        })
+        .catch(this.handleError);
     },
     loadDataByCategoryId(categoryId) {
       const token = localStorage.getItem('token');
@@ -198,10 +211,20 @@ export default {
     goToHome() {
       this.$router.push({ name: 'home' });
     },
-    submitForm() {
+    submitForm(title,content,userId,categoryId) {
       // 提交表单逻辑
       console.log('Form submitted with:', this.form);
-      // 重置表单并关闭弹窗
+
+      apiClient.post(`/article`, {
+        title,
+        content,
+        userId,
+        categoryId
+      })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+
       this.form.title = '';
       this.form.content = '';
       this.showPublishDialog = false;

@@ -46,11 +46,11 @@
           .then(response => {
             // 登录成功，获取JWT令牌
             const token = response.data.data;
+            console.log('数据:', response);
             console.log('令牌:', token);
             // 将令牌存储在本地，这里使用LocalStorage示例
             localStorage.setItem('token', token);
             localStorage.setItem('username', this.form.name);
-            localStorage.setItem('userId', this.form.userId);
             const returnUrl = this.$route.query.returnUrl || '/';
             this.$router.push(returnUrl);
 
