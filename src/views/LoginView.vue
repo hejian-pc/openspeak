@@ -27,6 +27,10 @@ export default {
       form: {
         name: '',
         password: ''
+      },
+      user:{
+        userId:'',
+        image:''
       }
     };
   },
@@ -44,30 +48,46 @@ export default {
       })
         .then(response => {
           // 登录成功，获取JWT令牌
-          const token = response.data.data;
-          console.log('数据:', response);
-          console.log('令牌:', token);
-          // 将令牌存储在本地，这里使用LocalStorage示例
-          localStorage.setItem('token', token);
-          localStorage.setItem('username', this.form.name);
-          const returnUrl = this.$route.query.returnUrl || '/';
-          this.$router.push(returnUrl);
+          if(response.data.code==1){
+            const token = response.data.data;
+            this.selectUser(this.form.name);
+            // 将令牌存储在本地，这里使用LocalStorage示例
+            localStorage.setItem('token', token);
+            localStorage.setItem('username', this.form.name);
+            
 
-          // 发送其他需要身份验证的请求时，在请求头部添加令牌
-          // axios.get('http://localhost:8080/home', {
-          // headers: {
-          //       'Authorization': `Bearer ${token}`
-          // }
-          // })
-
+            const returnUrl = this.$route.query.returnUrl || '/';
+            this.$router.push(returnUrl);
+          }else{
+            alert("错误！！！");
+          }
         });
-
     },
     register() {
       this.$router.push({ name: 'register' });
     },
     onCancel() {
       this.$router.go(-1); // 返回上一个页面
+    },
+    selectUser(username){
+      apiClient.get(`/login/${username}`, {
+        })
+            .then(response => {
+                if (response.data.code === 1) {
+                    console.log('返回的用户信息',response.data.data);
+                    this.user = response.data.data;
+                    console.log('返回的用户id',this.user.userId);
+                    localStorage.setItem('imageUrl', this.user.image);
+            localStorage.setItem('userId', this.user.userId);
+                  
+                } else {
+                    // 响应失败，输出错误信息
+                    console.error('Error:', response.data.msg);
+                }
+            })
+            .catch(error => {
+                console.log(error.response);
+            });
     }
   }
 };

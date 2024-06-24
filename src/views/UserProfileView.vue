@@ -28,6 +28,20 @@
                         <label>Email：</label>
                         <span>{{ userInfo.email }}</span>
                     </div>
+                    <button class="header-button" @click="showUploadDialog = true">上传图片</button>
+    <!-- 图片上传弹窗 -->
+    <el-dialog title="上传图片" :visible.sync="showUploadDialog">
+    <input type="file" @change="handleFileChange" />
+    <!-- 图片回显区域 -->
+    <div v-if="imagePreview" class="image-preview">
+        <img :src="imagePreview" alt="Image Preview" style="max-width: 100%; max-height: 300px; margin-top: 20px;">
+    </div>
+    <span slot="footer" class="dialog-footer">
+        <el-button @click="showUploadDialog = false">取消</el-button>
+        <el-button type="primary" @click="uploadFile">上传</el-button>
+    </span>
+</el-dialog>
+
                 </div>
                 <div v-if="display === 'likedArticles'" class="articles-section">
                     <h2>喜欢的文章</h2>
@@ -66,9 +80,14 @@ export default {
                 userId: null,
                 username: null, // 用户名
                 email: null, // 邮箱
+                image:null,
             },
             likedArticles: [],
             display: 'userInfo', // 当前显示的内容，默认为用户信息
+            showUploadDialog: false, // 控制上传弹窗的显示
+            selectedFile: null, // 选中的文件
+            imagePreview: null, // 存储图片预览的 URL
+            imageUrl:null,  //图片存储的URL
         };
     },
     mounted() {
@@ -95,6 +114,62 @@ export default {
             });
     },
     methods: {
+        // 处理文件选择
+        handleFileChange(event) {
+        const file = event.target.files[0];
+        this.selectedFile = file;
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imagePreview = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    },
+    // 上传文件
+    uploadFile() {
+        if (!this.selectedFile) {
+            this.$message.error('请先选择一个文件');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', this.selectedFile);
+
+        apiClient.post('/user/upload', formData, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(response => {
+            if (response.data.code === 1) {
+                this.$message.success('上传成功');
+                this.showUploadDialog = false;
+                this.imagePreview = null; // 清除预览
+                this.imageUrl = response.data.data;
+                console.log("返回的URL:"+this.imageUrl);
+                this.userInfo.image = this.imageUrl;
+                localStorage.setItem('imageUrl', this.imageUrl);
+                this.updateUser();
+                this.$store.commit('setImageUrl', this.imageUrl);
+            } else {
+                this.$message.error('上传失败: ' + response.data.msg);
+            }
+        })
+        .catch(error => {
+            console.error('上传失败:', error.response);
+            this.$message.error('上传失败');
+        });
+    },
+    updateUser(){
+        apiClient.post('/user/update',  {
+            userId:this.userInfo.userId,
+            image:this.userInfo.image,
+
+        })
+    },
+
+
         fetchLikedArticles() {
             const token = localStorage.getItem('token');
             apiClient.get(`/like/${this.userInfo.userId}`, {

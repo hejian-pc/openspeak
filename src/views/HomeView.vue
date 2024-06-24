@@ -1,11 +1,15 @@
 <template>
   <el-container>
-
     <el-header style="color: rgb(20, 106, 181);">
       <div class="header-content">
-        <button class="header-button" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
-          {{ loginStatus ? username : '未登录' }}
+        <div class="header-title"> &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; 欢迎访问论坛</div> 
+        <button class="header-button"
+            @click="loginStatus ? showMenu = !showMenu : goToLogin()"
+            :style="loginStatus ? { backgroundImage: 'url(' + imageUrl + ')' } : {}">
+            {{ loginStatus ? username : '未登录' }}
         </button>
+
+        
         <div class="custom-dropdown" v-show="loginStatus && showMenu">
           <button @click="goToUserProfile()">个人中心</button>
           <button @click="logout()">登出</button>
@@ -21,14 +25,57 @@
             {{ category.categoryName }}
           </el-menu-item>
           <el-menu-item>
+            <template v-if="loginStatus">
+          <div class="button-container">
             <el-button type="primary" round @click="showPublishDialog = true">添加新的分类</el-button>
+        </div>
+          </template>
+          <template v-else>
+            <router-link :to="{ name: 'login', query: { returnUrl: this.$route.fullPath } }" class="login-link">
+              登录后可以创建新的分类
+            </router-link>
+          </template>
+            
           </el-menu-item>
         </el-menu>
       </el-aside>
 
       <el-main class="main-content">
+        <div class="hello-row">
+          <strong>更新说明</strong>
+                <div class="article-content">
+                  新增条件查询，在首页查询全部，在分类中查询当前分类。
+                  分页功能以完善。
+                  发布文章后不需要刷新了。
+                </div>
+                <div class="article-info">
+                  2024-6-22
+                </div>
+    </div>
+    <div style="height: 20px;"></div>
+    <el-form ref="search" :model="search" inline>
+          <el-form-item>
+            <el-input placeholder="搜索标题或作者" v-model="search.titleOrAuthor" class="search-input"
+              style="width: 300px; margin-right: 10px;">
+            </el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-date-picker v-model="search.startDate" type="date" placeholder="开始日期" style="margin-right: 10px;">
+            </el-date-picker>
+          </el-form-item>
+          <el-form-item>
+            <el-date-picker v-model="search.endDate" type="date" placeholder="结束日期" style="margin-right: 10px;">
+            </el-date-picker>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="doSearch" native-type="submit">搜索</el-button>
+          </el-form-item>
+        </el-form>    
+
         <el-table :data="homeArticles" style="width: 100%" border>
           <el-table-column label="文章列表">
+            
+            
             <template slot-scope="scope">
               <div @click="goToDetail(scope.row.articleId)" class="article-box">
                 <strong>{{ scope.row.title }}</strong>
@@ -42,17 +89,16 @@
             </template>
           </el-table-column>
         </el-table>
-
+        <!-- 分页模块 -->
         <div class="block">
-        <el-pagination
-          layout="prev, pager, next"
-          :total="totalItems"
-          :page-size="pageSize"
-          :current-page="currentPage"
-          @current-change="handlePageChange"
-        >
-        </el-pagination>
-      </div>
+ <el-pagination 
+    layout="prev, pager, next"
+    :total="total"
+    :page-size="pageSize"
+    :current-page="currentPage"
+    @current-change="handlePageChange">
+  </el-pagination>
+</div>
       </el-main>
 
     </el-container>
@@ -96,23 +142,20 @@ export default {
       showPublishDialog: false, // 控制弹窗显示
       currentPage: 1, // 当前页码
       pageSize: 6, // 每页显示条数
+      total:0,
       form: {
         categoryName: '',
         categoryDescription: ''
-      }
+      },
+      imageUrl:null,
+      search: {
+        titleOrAuthor: '',
+        startDate: null,
+        endDate: null
+      },
     };
   },
   computed: {
-    totalItems() {
-      return this.homeArticles.length;
-    },
-    pagedArticles() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      console.log("页码大更新");
-      console.log(this.homeArticles.slice(start, end));
-      return this.homeArticles.slice(start, end);
-    },
   },
   mounted() {
     this.queryCategories();
@@ -125,14 +168,22 @@ export default {
       if (token) {
         this.loginStatus = true;
         this.username = localStorage.getItem('username');
+        this.imageUrl = localStorage.getItem("imageUrl");
       } else {
         this.loginStatus = false;
         this.username = '';
       }
     },
+    totalItems() {
+      return this.total;
+    },
     fetchHomeArticles() {
       const token = localStorage.getItem('token');
-      apiClient.get("/home", {
+      const params = new URLSearchParams({
+        pageNum:this.currentPage,
+        pageSize:this.pageSize,
+  }).toString();
+      apiClient.get(`pageArticle?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -140,7 +191,10 @@ export default {
         .then(response => {
           if (response.data.code === 1) {
             console.log(response.data);
-            this.homeArticles = response.data.data;
+            this.total = response.data.data.total;
+            this.total = this.total * this.pageSize;
+            console.log("冲页数",this.total);
+            this.homeArticles = response.data.data.records;
           } else {
             console.error('Error:', response.data.msg);
           }
@@ -176,14 +230,21 @@ export default {
       console.log("点击了按钮");
       localStorage.removeItem('token');
       localStorage.removeItem('username');
+      localStorage.removeItem('imageUrl');
       this.loginStatus = false;
       this.username = '';
+      this.imageUrl = '';
+      
     },
     goToUserProfile() {
       this.$router.push({ name: 'userprofile' });
     },
     handlePageChange(page) {
+      console.log("qian_______分页相关——————————",this.currentPage)
       this.currentPage = page;
+      this.fetchHomeArticles();//将页码给后端，并更新数据
+      
+      console.log("_hou______分页相关——————————",this.currentPage)
     },
     submitForm(categoryName, categoryDescription) {
       // 提交表单逻辑
@@ -192,6 +253,8 @@ export default {
       apiClient.post(`/categories`, {
         categoryName,
         categoryDescription
+      }).then(() => {
+        this.queryCategories();
       })
         .catch(error => {
           console.error('Error:', error);
@@ -202,6 +265,40 @@ export default {
       this.queryCategories();
       this.showPublishDialog = false;
 
+    },
+    doSearch() {
+      const params = new URLSearchParams({
+        pageNum:this.currentPage,
+        pageSize:this.pageSize,     
+        titleOrAuthor: this.search.titleOrAuthor,
+        
+  });
+
+  if (this.search.startDate) {
+    params.append('startDate', this.formatDate(this.search.startDate));
+}
+
+if (this.search.endDate) {
+    params.append('endDate', this.formatDate(this.search.endDate));
+}
+const queryString = params.toString();
+
+    apiClient.get(`pageArticle?${queryString}`, {
+      })
+        .then(response => {
+          if (response.data.code === 1) {
+            console.log(response.data);
+            this.total = response.data.data.total;
+            this.total = this.total * this.pageSize;
+            
+            this.homeArticles = response.data.data.records;
+          } else {
+            console.error('Error:', response.data.msg);
+          }
+        })
+        .catch(error => {
+          console.log(error.response);
+        });
     }
   }
 };
@@ -219,17 +316,27 @@ export default {
   
 }
 
-.header-button {
-  background: #409EFF;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 10px 15px;
-  margin-left: 10px;
-  color: #FFFFFF;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+.header-title {
+  flex-grow: 1; /* 让标题占据多余的空间，推动两侧的按钮对齐到两边 */
+  text-align: center; /* 确保标题文本居中 */
+  font-size: 40px;
 }
+
+.header-button {
+  border: none; /* 去除边框 */
+  color: white; /* 设置文本颜色 */
+  width: 100px; /* 按钮宽度 */
+  height: 50px; /* 按钮高度 */
+  background-color: #007BFF; /* 默认背景色，可以根据需求改变 */
+  display: inline-block;
+  text-align: center;
+  line-height: 50px; /* 文本垂直居中 */
+  cursor: pointer;
+  background-size: cover;  /* 确保背景图片覆盖整个按钮 */
+  background-position: center; /* 背景图片居中 */
+}
+
+
 
 .header-button:hover {
   background-color: #e0e0e0;
@@ -299,5 +406,19 @@ export default {
 .block {
   text-align: center;
   margin-top: 20px;
+
+}
+
+.login-link {
+  color: #007BFF;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.hello-row {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ebeef5;
+  text-align: center;
 }
 </style>

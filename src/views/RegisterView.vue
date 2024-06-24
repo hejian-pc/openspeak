@@ -51,6 +51,13 @@ export default {
   },
   methods: {
     onSubmit() {
+      if (!this.form.username || !this.form.password || !this.form.email || !this.form.name) {
+    this.$message({
+      type: 'warning',
+      message: '用户名、密码、邮箱和名字都不能为空！'
+    });
+    return; // 如果任何字段为空，则不继续执行
+  }
 
       apiClient.post('/register', {
         username: this.form.username,

@@ -4,11 +4,15 @@
     <el-header>
       <div class="header-content">
         <button class="header-button" @click="goToHome()">
-          首页
+          返回首页
         </button>
-        <button class="header-button" @click="loginStatus ? showMenu = !showMenu : goToLogin()">
-          {{ loginStatus ? username : '未登录' }}
-        </button>
+        <div class="header-title"> &emsp;&emsp;&emsp;&emsp; 欢迎访问论坛</div> 
+        <button
+  class="header-button"
+  @click="loginStatus ? showMenu = !showMenu : goToLogin()"
+  :style="loginStatus ? { backgroundImage: 'url(' + imageUrl + ')' } : {}">
+  {{ loginStatus ? username : '未登录' }}
+</button>
         <div class="custom-dropdown" v-show="loginStatus && showMenu">
           <button @click="goToUserProfile()">个人中心</button>
           <button @click="logout()">登出</button>
@@ -108,6 +112,7 @@ export default {
       comments: [], // 评论列表
       newComment: '', // 新评论内容
       user: null, // 用户信息
+      imageUrl:null,
       username: localStorage.getItem('username') || '', // 用户名
     };
   },
@@ -131,6 +136,7 @@ export default {
       this.loginStatus = !!token;
       if (this.loginStatus) {
         this.username = localStorage.getItem('username');
+        this.imageUrl = localStorage.getItem("imageUrl");
       } else {
         this.username = '';
       }
@@ -289,16 +295,25 @@ export default {
   z-index: 999;
 }
 
+.header-title {
+  flex-grow: 1; /* 让标题占据多余的空间，推动两侧的按钮对齐到两边 */
+  text-align: center; /* 确保标题文本居中 */
+  font-size: 40px;
+  color:  rgb(20, 106, 181);
+}
+
 .header-button {
-  background: #409EFF;
-  border: none;
-  font-size: 16px;
+  border: none; /* 去除边框 */
+  color: white; /* 设置文本颜色 */
+  width: 100px; /* 按钮宽度 */
+  height: 50px; /* 按钮高度 */
+  background-color: #007BFF; /* 默认背景色，可以根据需求改变 */
+  display: inline-block;
+  text-align: center;
+  line-height: 50px; /* 文本垂直居中 */
   cursor: pointer;
-  padding: 10px 15px;
-  margin-left: 10px;
-  color: #FFFFFF;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+  background-size: cover;  /* 确保背景图片覆盖整个按钮 */
+  background-position: center; /* 背景图片居中 */
 }
 
 .custom-dropdown {
